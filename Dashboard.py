@@ -13,7 +13,7 @@ st_autorefresh(interval=10000, key="datarefresh") # 10s for testing
 # --- DATABASE CONNECTION ---
 def get_db_data(query):
     try:
-        user, host, port, dbname = "dtwinuser", "192.168.10.189", "8503", "poc-digital-twin"
+        user, host, port, dbname = "dtwinuser", "114.143.58.70", "8503", "poc-digital-twin"
         password = st.secrets["db_password"]
         conn_str = f"postgresql://{user}:{urllib.parse.quote_plus(password)}@{host}:{port}/{dbname}"
         engine = create_engine(conn_str, connect_args={'connect_timeout': 5})
