@@ -24,7 +24,8 @@ def get_db_data(query):
         return pd.DataFrame()
 
 # --- 3. DATA RETRIEVAL ---
-tasks_df = get_db_data("SELECT * FROM cs_py_int.simulation_tasks ORDER BY created_at DESC LIMIT 1")
+# This ensures we only grab a task that actually HAS finished data
+tasks_df = get_db_data("SELECT * FROM cs_py_int.simulation_tasks WHERE status = 'Completed' ORDER BY completed_at DESC LIMIT 1")
 hb_df = get_db_data("SELECT * FROM cs_py_int.worker_heartbeat WHERE worker_name = 'CoilSim_SQL_Worker_01'")
 
 st.title("🏭 CoilSim 1D | Cracking Furnace Digital Twin")
