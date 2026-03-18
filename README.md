@@ -1,11 +1,11 @@
-# CoilSim 1D | Cracking Furnace Digital Twin POC
+# Cracking Furnace Digital Twin POC
 
 This repository contains the real-time Digital Twin dashboard for monitoring a Cracking Furnace. It bridges the **CoilSim 1D** simulation engine with a PostgreSQL database to provide predictive insights into reactor profiles and product yields.
 
 ## 🏗️ System Architecture
 
 1.  **Data Ingestion (DCS Simulator):** Synthetic plant data (COT, HC Flow) is pushed to a PostgreSQL database on a 5-minute cycle.
-2.  **Simulation Engine (Coilsim-Worker):** A background Python script on the server polls the DB, performs surgical updates to `exp.txt`, executes the CoilSim engine, and harvests results.
+2.  **Simulation Engine (Sim-Worker):** A background Python script on the server polls the DB, performs surgical updates to `exp.txt`, executes the CoilSim engine, and harvests results.
 3.  **Dashboard (Streamlit):** A multi-page web app for visualizing furnace health, lengthwise profiles, and historical yields.
 
 ## 🚀 Repository Structure
