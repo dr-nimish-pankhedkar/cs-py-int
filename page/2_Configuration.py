@@ -1,36 +1,31 @@
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
+import urllib.parse
 
-st.set_page_config(page_title="CoilSim Config", layout="wide")
+st.set_page_config(page_title="Configuration", layout="wide")
 
-st.title("⚙️ CoilSim Configuration Manager")
+def get_engine():
+    creds = st.secrets
+    encoded_pass = urllib.parse.quote_plus(creds["db_password"])
+    conn_str = f"postgresql://{creds['db_user']}:{encoded_pass}@{creds['db_host']}:{creds['db_port']}/{creds['db_name']}"
+    return create_engine(conn_str)
 
-# Logic to select Inputs vs Outputs
-mode = st.radio("Configuration Type", ["Input Mapping (exp.txt)", "Output Mapping (yields.csv)"])
+st.title("⚙️ CoilSim Configuration")
 
-if mode == "Input Mapping (exp.txt)":
-    st.subheader("Assign DB Columns to exp.txt Rows")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        var_name = st.text_input("Variable Name (e.g., COT)")
-    with col2:
-        row_idx = st.number_input("exp.txt Row Index", min_value=1, max_value=16, value=3)
-    with col3:
-        db_col = st.text_input("DB Column Name (in simulation_tasks)")
-    
-    if st.button("Register Input"):
-        # Logic to insert into cs_py_int.coilsim_map
-        st.success(f"Mapped {var_name} to Row {row_idx}")
+st.subheader("Input Assignment (exp.txt)")
+st.write("Current configuration maps DB columns to CoilSim 16-line input file.")
 
-else:
-    st.subheader("Select High-Priority Yields for Dashboard")
-    # This allows you to pick components like C2H4, C3H6 from the 700+ list
-    comp_to_track = st.text_input("Component ID/Name from CoilSim (e.g., C2H4)")
-    display_name = st.text_input("Display Label (e.g., Ethylene)")
-    
-    if st.button("Save Output Mapping"):
-        st.success(f"Dashboard will now track {comp_to_track} as {display_name}")
+c1, c2 = st.columns(2)
+with c1:
+    st.info("**Row 3 (COT):** Mapped to `cot_input` column")
+with c2:
+    st.info("**Row 9 (HC Flow):** Mapped to `flow_input` column")
 
 st.divider()
-st.info("Note: Changes here will affect the next background worker run.")
+if st.button("Reset Incomplete Tasks"):
+    if st.text_input("Admin Password", type="password") == st.secrets["admin_password"]:
+        engine = get_engine()
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE cs_py_int.simulation_tasks SET status = 'Pending' WHERE status = 'Processing'"))
+        st.success("Tasks Reset.")
