@@ -19,55 +19,53 @@ def get_db_data(query):
 
 st.title("📋 Historical Simulation Logs")
 
-# --- 1. FULL TASK HISTORY TABLE ---
-st.subheader("Run History (Tasks)")
-tasks_query = "SELECT id, status, created_at, completed_at, cot_input, flow_input FROM cs_py_int.simulation_tasks ORDER BY created_at DESC"
-df_tasks = get_db_data(tasks_query)
+# Create 3 sub-pages using Tabs
+tab1, tab2, tab3 = st.tabs(["📝 Task Summary", "🧪 Component Yields", "📉 Axial Profiles"])
 
-if not df_tasks.empty:
-    st.dataframe(df_tasks, use_container_width=True, hide_index=True)
-else:
-    st.info("No tasks found in simulation_tasks table.")
-
-st.divider()
-
-# --- 2. YIELD HISTORY TABLE (FILTERABLE) ---
-st.subheader("Product Yields")
-
-# Fetch Yields joined with Task ID for context
-yield_query = """
-    SELECT y.task_id, t.created_at, y.component_name, y.yield_value 
-    FROM cs_py_int.yield_history y 
-    JOIN cs_py_int.simulation_tasks t ON y.task_id = t.id 
-    ORDER BY t.created_at DESC
-"""
-df_yields = get_db_data(yield_query)
-
-if not df_yields.empty:
-    # Get available components from the actual data
-    available_comps = df_yields['component_name'].unique().tolist()
-    
-    # SAFETY FIX: Only use defaults if they exist in the data
-    default_selection = [c for c in ["C2H4", "C3H6"] if c in available_comps]
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        selected_comps = st.multiselect(
-            "Filter by Components", 
-            options=available_comps, 
-            default=default_selection
-        )
-    
-    # Filter the dataframe
-    if selected_comps:
-        filtered_df = df_yields[df_yields['component_name'].isin(selected_comps)]
+# --- TAB 1: TASK SUMMARY ---
+with tab1:
+    st.subheader("Run History")
+    tasks_query = "SELECT id, status, created_at, completed_at, cot_input, flow_input FROM cs_py_int.simulation_tasks ORDER BY id DESC"
+    df_tasks = get_db_data(tasks_query)
+    if not df_tasks.empty:
+        st.dataframe(df_tasks, use_container_width=True, hide_index=True)
     else:
-        filtered_df = df_yields
+        st.info("No tasks found.")
 
-    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+# --- TAB 2: COMPONENT YIELDS ---
+with tab2:
+    st.subheader("Global Yield Records")
+    yield_query = """
+        SELECT y.task_id, y.component_name, y.yield_value 
+        FROM cs_py_int.yield_history y 
+        ORDER BY y.task_id DESC
+    """
+    df_yields = get_db_data(yield_query)
 
-    # Download Section
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download Filtered Yields (CSV)", data=csv, file_name="coilsim_logs.csv")
-else:
-    st.info("No data found in yield_history table.")
+    if not df_yields.empty:
+        # Check available components
+        available_comps = df_yields['component_name'].unique().tolist()
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            selected_comps = st.multiselect("Select Components", options=available_comps)
+        
+        if selected_comps:
+            filtered_df = df_yields[df_yields['component_name'].isin(selected_comps)]
+        else:
+            filtered_df = df_yields
+
+        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ No yields found. Check if the Worker is harvesting yields.csv correctly.")
+
+# --- TAB 3: AXIAL PROFILES ---
+with tab3:
+    st.subheader("Raw Axial Data (Last 10 Runs)")
+    profile_query = "SELECT * FROM cs_py_int.profile_details ORDER BY task_id DESC, axial_position ASC"
+    df_profiles = get_db_data(profile_query)
+    
+    if not df_profiles.empty:
+        st.dataframe(df_profiles, use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ No profile data found. This is why the Dashboard RHS graphs are empty.")
