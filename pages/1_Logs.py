@@ -1,33 +1,73 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from sqlalchemy import create_engine
 import urllib.parse
 
 st.set_page_config(page_title="Simulation Logs", layout="wide")
 
+# --- DATABASE UTILITY ---
 def get_db_data(query):
-    creds = st.secrets
-    encoded_pass = urllib.parse.quote_plus(creds["db_password"])
-    conn_str = f"postgresql://{creds['db_user']}:{encoded_pass}@{creds['db_host']}:{creds['db_port']}/{creds['db_name']}"
-    engine = create_engine(conn_str)
-    return pd.read_sql(query, engine)
+    try:
+        creds = st.secrets
+        encoded_pass = urllib.parse.quote_plus(creds["db_password"])
+        conn_str = f"postgresql://{creds['db_user']}:{encoded_pass}@{creds['db_host']}:{creds['db_port']}/{creds['db_name']}"
+        engine = create_engine(conn_str)
+        return pd.read_sql(query, engine)
+    except Exception as e:
+        st.error(f"❌ Connection Error: {e}")
+        return pd.DataFrame()
 
-st.title("📋 Simulation History & Analytics")
+st.title("📋 Historical Simulation Logs")
 
-tab1, tab2 = st.tabs(["📈 Profile Comparison", "🧪 Yield History"])
+# --- 1. FULL TASK HISTORY TABLE ---
+st.subheader("Run History (Tasks)")
+tasks_query = "SELECT id, status, created_at, completed_at, cot_input, flow_input FROM cs_py_int.simulation_tasks ORDER BY created_at DESC"
+df_tasks = get_db_data(tasks_query)
 
-with tab1:
-    st.subheader("Last 10 Lengthwise Profiles")
-    all_profiles = get_db_data("SELECT * FROM cs_py_int.profile_details ORDER BY task_id DESC, axial_position ASC")
-    if not all_profiles.empty:
-        all_profiles['task_id'] = all_profiles['task_id'].astype(str)
-        var = st.selectbox("Select Parameter", ["tgas", "mass_conversion", "velocity"])
-        fig = px.line(all_profiles, x="axial_position", y=var, color="task_id", template="plotly_dark")
-        st.plotly_chart(fig, use_container_width=True)
+if not df_tasks.empty:
+    st.dataframe(df_tasks, use_container_width=True, hide_index=True)
+else:
+    st.info("No tasks found in simulation_tasks table.")
 
-with tab2:
-    st.subheader("Yield Search")
-    yields = get_db_data("SELECT t.id, t.created_at, y.component_name, y.yield_value FROM cs_py_int.yield_history y JOIN cs_py_int.simulation_tasks t ON y.task_id = t.id ORDER BY t.created_at DESC")
-    comps = st.multiselect("Components", options=yields['component_name'].unique(), default=["C2H4", "C3H6"])
-    st.dataframe(yields[yields['component_name'].isin(comps)], use_container_width=True)
+st.divider()
+
+# --- 2. YIELD HISTORY TABLE (FILTERABLE) ---
+st.subheader("Product Yields")
+
+# Fetch Yields joined with Task ID for context
+yield_query = """
+    SELECT y.task_id, t.created_at, y.component_name, y.yield_value 
+    FROM cs_py_int.yield_history y 
+    JOIN cs_py_int.simulation_tasks t ON y.task_id = t.id 
+    ORDER BY t.created_at DESC
+"""
+df_yields = get_db_data(yield_query)
+
+if not df_yields.empty:
+    # Get available components from the actual data
+    available_comps = df_yields['component_name'].unique().tolist()
+    
+    # SAFETY FIX: Only use defaults if they exist in the data
+    default_selection = [c for c in ["C2H4", "C3H6"] if c in available_comps]
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        selected_comps = st.multiselect(
+            "Filter by Components", 
+            options=available_comps, 
+            default=default_selection
+        )
+    
+    # Filter the dataframe
+    if selected_comps:
+        filtered_df = df_yields[df_yields['component_name'].isin(selected_comps)]
+    else:
+        filtered_df = df_yields
+
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+
+    # Download Section
+    csv = filtered_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Filtered Yields (CSV)", data=csv, file_name="coilsim_logs.csv")
+else:
+    st.info("No data found in yield_history table.")
