@@ -3,5 +3,5 @@ pandas
 plotly
 sqlalchemy
 psycopg2-binary
-st-autorefresh
+streamlit-autorefresh
 pyyaml
