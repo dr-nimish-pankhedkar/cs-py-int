@@ -9,7 +9,7 @@ from datetime import datetime
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(page_title="CoilSim Digital Twin", layout="wide")
 
-# CSS to hide the "Running..." man and make transitions smoother
+# CSS to hide status widgets and clean up padding
 st.markdown("""
     <style>
         [data-testid="stStatusWidget"] { visibility: hidden; }
@@ -29,7 +29,7 @@ def get_db_data(query):
     try:
         engine = get_engine()
         return pd.read_sql(query, engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 # --- 3. DYNAMIC FRAGMENT (THE REFRESH ZONE) ---
@@ -60,47 +60,51 @@ def update_dashboard():
 
     with col1:
         st.subheader("Process Schematic")
-        # ... [Keep your SVG logic here] ...
+        
+        # Define display values
+        cot_disp = f"{latest['cot_input']:.1f}" if pd.notnull(latest['cot_input']) else "---"
+        flow_disp = f"{latest['flow_input']:.0f}" if pd.notnull(latest['flow_input']) else "---"
+        
+        # Restore SVG Logic
+        svg_html = f"""
+        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+            <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                <defs>
+                    <marker id="ar" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" /></marker>
+                    <marker id="ab" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1976d2" /></marker>
+                </defs>
+                <rect x="80" y="60" width="240" height="200" fill="#f8f9fa" stroke="#6c757d" stroke-width="2" rx="5" />
+                <path d="M 100 280 L 100 80 L 160 240 L 220 80 L 280 240 L 280 40" fill="none" stroke="#f39c12" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <line x1="100" y1="310" x2="100" y2="285" stroke="#1976d2" stroke-width="3" marker-end="url(#ab)" />
+                <text x="100" y="315" fill="#1976d2" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">INLET: {flow_disp} kg/h</text>
+                <line x1="280" y1="35" x2="280" y2="10" stroke="#d32f2f" stroke-width="3" marker-end="url(#ar)" />
+                <text x="280" y="55" fill="#d32f2f" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">OUTLET: {cot_disp} °C</text>
+            </svg>
+        </div>
+        """
         components.html(svg_html, height=380)
         
         st.write("---")
         
-        # --- CREATIVE YIELDS DISPLAY ---
+        # --- CREATIVE YIELDS DISPLAY (Bar Chart) ---
         st.subheader(f"🧪 Product Slate (Run #{latest['id']})")
-        
         if not yield_df.empty:
-            # We filter for top 8-10 components to keep the UI clean
-            top_yields = yield_df.head(10).copy()
+            top_yields = yield_df.head(10).copy().sort_values("Yield", ascending=True)
             
-            # Create a horizontal bar chart
             fig_yield = go.Figure(go.Bar(
                 x=top_yields["Yield"],
                 y=top_yields["Component"],
                 orientation='h',
-                marker=dict(
-                    color=top_yields["Yield"],
-                    colorscale='Viridis',
-                    line=dict(color='rgba(255, 255, 255, 0.5)', width=1)
-                ),
+                marker=dict(color=top_yields["Yield"], colorscale='Viridis'),
                 text=top_yields["Yield"].apply(lambda x: f"{x:.2f}%"),
                 textposition='outside',
             ))
-
             fig_yield.update_layout(
-                template="plotly_white",
-                height=400,
-                margin=dict(l=10, r=40, t=10, b=10),
-                xaxis=dict(title="Yield (wt%)", showgrid=True, gridcolor="#eee"),
-                yaxis=dict(autorange="reversed"), # High yields at the top
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
+                template="plotly_white", height=400, margin=dict(l=10, r=50, t=10, b=10),
+                xaxis=dict(title="Yield (wt%)", showgrid=True),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             )
-            
             st.plotly_chart(fig_yield, use_container_width=True, config={'displayModeBar': False})
-            
-            # Optional: Add a small expander if the user still wants to see the raw table
-            with st.expander("View Raw Data Table"):
-                st.dataframe(yield_df, use_container_width=True, hide_index=True)
         else:
             st.info("Awaiting yield data...")
 
@@ -121,15 +125,14 @@ def update_dashboard():
             st.plotly_chart(fig, use_container_width=True)
 
 # --- 4. MAIN PAGE EXECUTION ---
-# Execute the sidebar once (it won't flicker)
 with st.sidebar:
     st.header("⚙️ Worker Status")
-    hb_df = get_db_data("SELECT * FROM cs_py_int.worker_heartbeat WHERE worker_name = 'CoilSim_SQL_Worker_01'")
-    if not hb_df.empty:
+    hb_data = get_db_data("SELECT * FROM cs_py_int.worker_heartbeat WHERE worker_name = 'CoilSim_SQL_Worker_01'")
+    if not hb_data.empty:
         st.success("CoilSim Worker: Online")
-        st.caption(f"Last Pulse: {hb_row['last_pulse'].strftime('%H:%M:%S') if 'hb_row' in locals() else 'Active'}")
+        st.caption(f"Last Pulse: {hb_data.iloc[0]['last_pulse'].strftime('%H:%M:%S')}")
     else:
         st.error("Worker: Offline")
 
-# Start the smooth update fragment
+# Start the dashboard update
 update_dashboard()
