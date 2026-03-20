@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 import urllib.parse
 from streamlit_autorefresh import st_autorefresh
 import streamlit.components.v1 as components
+from datetime import datetime
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(page_title="CoilSim Digital Twin", layout="wide")
@@ -22,7 +23,8 @@ def get_db_data(query):
         st.error(f"❌ Connection Error: {e}")
         return pd.DataFrame()
 
-# --- 3. DATA RETRIEVAL ---
+# --- 3. DATA RETRIEVAL (STRICTLY COMPLETED RUNS) ---
+# This ensures the front page always shows the "Last Known Good" result
 tasks_df = get_db_data("""
     SELECT * FROM cs_py_int.simulation_tasks 
     WHERE status = 'Completed' 
@@ -31,9 +33,16 @@ tasks_df = get_db_data("""
 
 hb_df = get_db_data("SELECT * FROM cs_py_int.worker_heartbeat WHERE worker_name = 'CoilSim_SQL_Worker_01'")
 
-st.title("🏭 CoilSim 1D | Cracking Furnace Digital Twin")
+# --- 4. HEADER WITH TIMESTAMP ---
+if not tasks_df.empty:
+    latest = tasks_df.iloc[0]
+    last_ts = latest['completed_at'].strftime("%d-%b-%Y %H:%M:%S")
+    st.markdown(f"### 🔥 CoilSim 1D Digital Twin | <span style='color:#d32f2f;'>Last Update: {last_ts}</span>", unsafe_allow_html=True)
+else:
+    st.title("🏭 CoilSim 1D | Cracking Furnace Digital Twin")
+    st.warning("Awaiting first completed simulation...")
 
-# --- 4. DATA PROCESSING ---
+# --- 5. DATA PROCESSING ---
 latest_task_id = None
 cot_display, flow_display = "---", "---"
 profile_df = pd.DataFrame()
@@ -48,16 +57,15 @@ if not tasks_df.empty:
     # Fetch profile data
     profile_df = get_db_data(f"SELECT axial_position, tgas, mass_conversion FROM cs_py_int.profile_details WHERE task_id = {latest_task_id} ORDER BY axial_position")
     
-    # Fetch yield data for THIS specific task only
-    yield_df = get_db_data(f"SELECT component_name as 'Component', yield_value as 'Yield' FROM cs_py_int.yield_history WHERE task_id = {latest_task_id} ORDER BY yield_value DESC")
+    # FIXED SQL: Used double quotes for aliases to satisfy PostgreSQL syntax
+    yield_df = get_db_data(f'SELECT component_name as "Component", yield_value as "Yield" FROM cs_py_int.yield_history WHERE task_id = {latest_task_id} ORDER BY yield_value DESC')
 
-# --- 5. MAIN DASHBOARD LAYOUT ---
+# --- 6. MAIN DASHBOARD LAYOUT ---
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
     st.subheader("Process Schematic")
     
-    # Vertical W-Coil SVG
     svg_html = f"""
     <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
         <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
@@ -76,14 +84,14 @@ with col1:
     """
     components.html(svg_html, height=380)
 
-    # --- NEW: INSTANT YIELDS TABLE ---
     st.write("---")
-    st.subheader(f"🧪 Instant Yields (Run {latest_task_id})")
+    st.subheader(f"🧪 Product Yields (Run #{latest_task_id})")
     if not yield_df.empty:
-        # Show top components (e.g., Ethylene, Propylene, Methane)
-        st.dataframe(yield_df, use_container_width=True, hide_index=True, height=250)
+        # Round yields to 4 decimal places for cleanliness
+        yield_df["Yield"] = yield_df["Yield"].round(4)
+        st.dataframe(yield_df, use_container_width=True, hide_index=True, height=300)
     else:
-        st.info("Awaiting yield harvest...")
+        st.info("No yield data available for the last completed run.")
 
 with col2:
     st.subheader("Lengthwise Profiles")
@@ -94,19 +102,19 @@ with col2:
             fig.add_trace(go.Scatter(x=profile_df['axial_position'], y=profile_df['mass_conversion'], name="Conv (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
             
             fig.update_layout(
-                template="plotly_white", height=500,
+                template="plotly_white", height=550,
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=10, r=10, t=10, b=10),
                 xaxis=dict(title=dict(text="Axial Position [m]"), gridcolor="#eee"),
                 yaxis=dict(title=dict(text="Tgas (°C)", font=dict(color="#d32f2f")), gridcolor="#eee"),
                 yaxis2=dict(title=dict(text="Conversion (%)", font=dict(color="#1976d2")), overlaying="y", side="right", gridcolor="#eee"),
-                legend=dict(orientation="h", y=1.08, x=0.5, xanchor="center")
+                legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center")
             )
             st.plotly_chart(fig, use_container_width=True)
         except Exception as plot_err:
-            st.warning(f"Plotting Error: {plot_err}")
+            st.warning("Waiting for clean profile coordinates...")
     else:
-        st.info("📊 Awaiting data: Run the simulation worker to populate profiles.")
+        st.info("📊 Processing new profile data...")
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -114,6 +122,7 @@ with st.sidebar:
     if not hb_df.empty:
         hb_row = hb_df.iloc[0]
         st.success("CoilSim Worker: Online")
-        st.caption(f"Last Heartbeat: {hb_row['last_pulse']}")
+        st.write(f"**State:** {hb_row['status_message']}")
+        st.caption(f"Heartbeat: {hb_row['last_pulse'].strftime('%H:%M:%S')}")
     else:
         st.error("CoilSim Worker: Offline")
