@@ -58,31 +58,37 @@ with col1:
     st.subheader("Process Schematic")
     
     # NEW SVG: 4-Pass W-Coil with Circular U-Bends (Engineering Front View)
-    svg_html = f"""
-    <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
-        <svg viewBox="0 0 400 350" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
-            <defs>
-                <marker id="ar" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" /></marker>
-                <marker id="ab" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1976d2" /></marker>
-            </defs>
-            
-            <rect x="60" y="80" width="280" height="210" fill="#fcfcfc" stroke="#999" stroke-width="2" />
-            <line x1="60" y1="80" x2="340" y2="80" stroke="#444" stroke-width="4" /> <rect x="100" y="30" width="12" height="260" fill="#f39c12" stroke="#e67e22" stroke-width="1" />
-            <path d="M 100 290 Q 130 330 160 290" fill="none" stroke="#e67e22" stroke-width="10" stroke-linecap="round" />
-            <rect x="154" y="110" width="12" height="180" fill="#f39c12" stroke="#e67e22" stroke-width="1" />
-            <path d="M 160 110 Q 185 70 210 110" fill="none" stroke="#e67e22" stroke-width="10" stroke-linecap="round" />
-            <rect x="204" y="110" width="12" height="180" fill="#f39c12" stroke="#e67e22" stroke-width="1" />
-            <path d="M 210 290 Q 240 330 270 290" fill="none" stroke="#e67e22" stroke-width="10" stroke-linecap="round" />
-            <rect x="264" y="30" width="12" height="260" fill="#f39c12" stroke="#e67e22" stroke-width="1" />
+# Shifted ViewBox from 350 to 400 height to give labels "headroom"
+        svg_html = f"""
+        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+            <svg viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                <defs>
+                    <marker id="ar" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" /></marker>
+                    <marker id="ab" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1976d2" /></marker>
+                </defs>
+                
+                <rect x="60" y="100" width="280" height="230" fill="#fcfcfc" stroke="#999" stroke-width="2" />
+                <line x1="60" y1="100" x2="340" y2="100" stroke="#444" stroke-width="4" />
 
-            <line x1="106" y1="10" x2="106" y2="25" stroke="#1976d2" stroke-width="2" marker-end="url(#ab)" />
-            <text x="106" y="5" fill="#1976d2" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle">FEED: {flow_display} kg/h</text>
-            
-            <line x1="270" y1="25" x2="270" y2="5" stroke="#d32f2f" stroke-width="2" marker-end="url(#ar)" />
-            <text x="270" y="45" fill="#d32f2f" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle">COT: {cot_display} °C</text>
-        </svg>
-    </div>
-    """
+                <rect x="100" y="60" width="14" height="260" fill="#f39c12" stroke="#e67e22" />
+                <path d="M 100 320 Q 135 370 170 320" fill="none" stroke="#e67e22" stroke-width="12" stroke-linecap="round" />
+                
+                <rect x="163" y="140" width="14" height="180" fill="#f39c12" stroke="#e67e22" />
+                <path d="M 170 140 Q 200 90 230 140" fill="none" stroke="#e67e22" stroke-width="12" stroke-linecap="round" />
+                
+                <rect x="223" y="140" width="14" height="180" fill="#f39c12" stroke="#e67e22" />
+                <path d="M 230 320 Q 265 370 300 320" fill="none" stroke="#e67e22" stroke-width="12" stroke-linecap="round" />
+                
+                <rect x="293" y="60" width="14" height="260" fill="#f39c12" stroke="#e67e22" />
+
+                <line x1="107" y1="15" x2="107" y2="55" stroke="#1976d2" stroke-width="3" marker-end="url(#ab)" />
+                <text x="107" y="35" fill="#1976d2" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle">FEED: {flow_display} kg/h</text>
+                
+                <line x1="300" y1="55" x2="300" y2="15" stroke="#d32f2f" stroke-width="3" marker-end="url(#ar)" />
+                <text x="300" y="85" fill="#d32f2f" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle">COT: {cot_display} °C</text>
+            </svg>
+        </div>
+        """
     components.html(svg_html, height=380)
 
     st.write("---")
