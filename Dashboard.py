@@ -87,7 +87,7 @@ def update_dashboard():
         st.write("---")
         
         # --- CREATIVE YIELDS DISPLAY (Bar Chart) ---
-        st.subheader(f"🧪 Product Slate (Run #{latest['id']})")
+        st.subheader(f"🧪 Product Slate ")
         if not yield_df.empty:
             top_yields = yield_df.head(10).copy().sort_values("Yield", ascending=True)
             
