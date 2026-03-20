@@ -91,22 +91,43 @@ def update_dashboard():
         st.subheader("Lengthwise Profiles")
         st.caption("**(SIMULATED)**")
         
-        # Check for column names exactly as they are in SQL result
-        if not profile_df.empty and 'axial_position' in profile_df.columns:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=profile_df['axial_position'], y=profile_df['tgas'], name="Tgas (°C)", line=dict(color="#d32f2f", width=3)))
-            fig.add_trace(go.Scatter(x=profile_df['axial_position'], y=profile_df['mass_conversion'], name="Conv (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
-            
-            fig.update_layout(
-                template="plotly_white", height=550, margin=dict(l=10, r=10, t=10, b=10),
-                xaxis=dict(title="Axial Position [m]"),
-                yaxis=dict(title="Tgas (°C)", titlefont=dict(color="#d32f2f")),
-                yaxis2=dict(title="Conversion (%)", overlaying="y", side="right", titlefont=dict(color="#1976d2")),
-                legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center")
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        # Ensure we have valid numeric data before plotting
+        if not profile_df.empty and 'axial_position' in profile_df.columns and len(profile_df) > 1:
+            try:
+                # Drop any NaNs that might have sneaked into the numeric columns
+                df_plot = profile_df.dropna(subset=['axial_position', 'tgas', 'mass_conversion'])
+                
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['tgas'], name="Tgas (°C)", line=dict(color="#d32f2f", width=3)))
+                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['mass_conversion'], name="Conv (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
+                
+                # FIXED: Moved 'font' inside the 'title' dictionary
+                fig.update_layout(
+                    template="plotly_white", 
+                    height=550, 
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    xaxis=dict(title=dict(text="Axial Position [m]")),
+                    yaxis=dict(
+                        title=dict(
+                            text="Tgas (°C)", 
+                            font=dict(color="#d32f2f")
+                        )
+                    ),
+                    yaxis2=dict(
+                        title=dict(
+                            text="Conversion (%)", 
+                            font=dict(color="#1976d2")
+                        ), 
+                        overlaying="y", 
+                        side="right"
+                    ),
+                    legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center")
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as plot_err:
+                st.error(f"Internal Plotting Error: {plot_err}")
         else:
-            st.info(f"📊 Run #{tid} completed, but no profile points were found.")
+            st.info(f"📊 Run #{tid} found, but axial profile data is incomplete.")
 
 # --- 3. MAIN ---
 with st.sidebar:
