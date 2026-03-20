@@ -60,7 +60,7 @@ with col1:
     # NEW SVG: 4-Pass W-Coil with Circular U-Bends (Engineering Front View)
     # Shifting the viewBox to 400 and labels to y=35 to prevent clipping
             svg_html = f"""
-    <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
         <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
             <defs>
                 <marker id="ar" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" /></marker>
