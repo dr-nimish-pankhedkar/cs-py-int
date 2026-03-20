@@ -60,31 +60,49 @@ def update_dashboard():
 
     with col1:
         st.subheader("Process Schematic")
-        cot_display = f"{latest['cot_input']:.1f}" if pd.notnull(latest['cot_input']) else "---"
-        flow_display = f"{latest['flow_input']:.0f}" if pd.notnull(latest['flow_input']) else "---"
-        
-        svg_html = f"""
-        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #ddd;">
-            <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
-                <defs>
-                    <marker id="arrow_red" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" /></marker>
-                    <marker id="arrow_blue" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1976d2" /></marker>
-                </defs>
-                <rect x="80" y="60" width="240" height="200" fill="#f8f9fa" stroke="#6c757d" stroke-width="2" rx="5" />
-                <path d="M 100 280 L 100 80 L 160 240 L 220 80 L 280 240 L 280 40" fill="none" stroke="#f39c12" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-                <line x1="100" y1="310" x2="100" y2="285" stroke="#1976d2" stroke-width="3" marker-end="url(#arrow_blue)" />
-                <text x="100" y="325" fill="#1976d2" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">INLET: {flow_display} kg/h</text>
-                <line x1="280" y1="35" x2="280" y2="10" stroke="#d32f2f" stroke-width="3" marker-end="url(#arrow_red)" />
-                <text x="280" y="55" fill="#d32f2f" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">OUTLET: {cot_display} °C</text>
-            </svg>
-        </div>
-        """
+        # ... [Keep your SVG logic here] ...
         components.html(svg_html, height=380)
+        
         st.write("---")
-        st.subheader(f"🧪 Product Yields (Run #{latest['id']})")
+        
+        # --- CREATIVE YIELDS DISPLAY ---
+        st.subheader(f"🧪 Product Slate (Run #{latest['id']})")
+        
         if not yield_df.empty:
-            yield_df["Yield"] = yield_df["Yield"].round(4)
-            st.dataframe(yield_df, use_container_width=True, hide_index=True, height=300)
+            # We filter for top 8-10 components to keep the UI clean
+            top_yields = yield_df.head(10).copy()
+            
+            # Create a horizontal bar chart
+            fig_yield = go.Figure(go.Bar(
+                x=top_yields["Yield"],
+                y=top_yields["Component"],
+                orientation='h',
+                marker=dict(
+                    color=top_yields["Yield"],
+                    colorscale='Viridis',
+                    line=dict(color='rgba(255, 255, 255, 0.5)', width=1)
+                ),
+                text=top_yields["Yield"].apply(lambda x: f"{x:.2f}%"),
+                textposition='outside',
+            ))
+
+            fig_yield.update_layout(
+                template="plotly_white",
+                height=400,
+                margin=dict(l=10, r=40, t=10, b=10),
+                xaxis=dict(title="Yield (wt%)", showgrid=True, gridcolor="#eee"),
+                yaxis=dict(autorange="reversed"), # High yields at the top
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+            
+            st.plotly_chart(fig_yield, use_container_width=True, config={'displayModeBar': False})
+            
+            # Optional: Add a small expander if the user still wants to see the raw table
+            with st.expander("View Raw Data Table"):
+                st.dataframe(yield_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("Awaiting yield data...")
 
     with col2:
         st.subheader("Lengthwise Profiles")
