@@ -88,28 +88,64 @@ with col1:
 
 with col2:
     st.subheader("Lengthwise Profiles")
-    # STRICT CHECK: Only run plotly if we have rows AND valid axial positions
+    # STRICT CHECK: Ensure profile_df is not empty and has multiple points
     if not profile_df.empty and len(profile_df) > 1:
         try:
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=profile_df['axial_position'], y=profile_df['tgas'], name="Tgas (°C)", line=dict(color="#d32f2f", width=3)))
-            fig.add_trace(go.Scatter(x=profile_df['axial_position'], y=profile_df['mass_conversion'], name="Conv (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
             
+            # Primary Variable: Gas Temperature (Left Axis, Red Line)
+            fig.add_trace(go.Scatter(
+                x=profile_df['axial_position'], 
+                y=profile_df['tgas'], 
+                name="Tgas (°C)", 
+                line=dict(color="#d32f2f", width=3)
+            ))
+            
+            # Secondary Variable: Mass Conversion (Right Axis, Blue Dashed Line)
+            fig.add_trace(go.Scatter(
+                x=profile_df['axial_position'], 
+                y=profile_df['mass_conversion'], 
+                name="Conv (%)", 
+                yaxis="y2", 
+                line=dict(color="#1976d2", dash='dash', width=3)
+            ))
+            
+            # FIXED LAYOUT: Moved font settings inside the title dictionary
             fig.update_layout(
                 template="plotly_white", 
                 height=400,
-                margin=dict(l=10,r=10,t=10,b=10),
-                xaxis=dict(title="Axial Position [m]", gridcolor="#eee"),
-                yaxis=dict(title="Tgas (°C)", gridcolor="#eee", titlefont=dict(color="#d32f2f")),
-                yaxis2=dict(title="Conversion (%)", overlaying="y", side="right", gridcolor="#eee", titlefont=dict(color="#1976d2")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=10, r=10, t=10, b=10),
+                xaxis=dict(
+                    title=dict(text="Axial Position [m]"), 
+                    gridcolor="#eee"
+                ),
+                yaxis=dict(
+                    title=dict(
+                        text="Tgas (°C)", 
+                        font=dict(color="#d32f2f") # Corrected path
+                    ), 
+                    gridcolor="#eee"
+                ),
+                yaxis2=dict(
+                    title=dict(
+                        text="Conversion (%)", 
+                        font=dict(color="#1976d2") # Corrected path
+                    ), 
+                    overlaying="y", 
+                    side="right", 
+                    gridcolor="#eee"
+                ),
                 legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
             )
             st.plotly_chart(fig, use_container_width=True)
+            
         except Exception as plot_err:
             st.warning(f"Plotting Error: {plot_err}")
     else:
         st.info("📊 Awaiting data: Run the simulation worker to populate profiles.")
-
+        
 # --- SIDEBAR ---
 st.divider()
 with st.sidebar:
