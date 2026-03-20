@@ -79,7 +79,7 @@ def update_dashboard():
         components.html(svg_html, height=440)
         
         st.write("---")
-        st.subheader(f"🧪 Product Slate (Run #{tid})")
+        st.subheader(f"🧪 Product Slate:")
         st.caption("**(SIMULATED)**")
         if not yield_df.empty:
             top_y = yield_df.head(10).copy().sort_values("Yield", ascending=True)
@@ -98,8 +98,8 @@ def update_dashboard():
                 df_plot = profile_df.dropna(subset=['axial_position', 'tgas', 'mass_conversion'])
                 
                 fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['tgas'], name="Tgas (°C)", line=dict(color="#d32f2f", width=3)))
-                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['mass_conversion'], name="Conv (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
+                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['tgas'], name="T_Gas (°C)", line=dict(color="#d32f2f", width=3)))
+                fig.add_trace(go.Scatter(x=df_plot['axial_position'], y=df_plot['mass_conversion'], name="Mass Conversion (%)", yaxis="y2", line=dict(color="#1976d2", dash='dash', width=3)))
                 
                 # FIXED: Moved 'font' inside the 'title' dictionary
                 fig.update_layout(
